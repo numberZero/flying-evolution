@@ -8,8 +8,8 @@ typedef Eigen::Matrix<Float, 2, 1> Vector;
 
 struct BodyDesc
 {
-        Float mass;
-        Float rotation_resistance;
+	Float mass;
+	Float rotation_resistance;
 };
 
 enum class StepState
@@ -22,26 +22,26 @@ enum class StepState
 struct Body
 {
 // static data
-        BodyDesc const& desc;
+	BodyDesc const& desc;
 
 // body state
-        Vector position;
-        Vector velocity;
-        Float rotation;
-        Float angular_veloctiy;
+	Vector position;
+	Vector velocity;
+	Float rotation;
+	Float angular_veloctiy;
 
 // temporary storage
 	StepState stst = StepState::Opaque;
-        Vector force;
-        Float momentum;
+	Vector force;
+	Float momentum;
 
 // methods
-        explicit Body(BodyDesc const& description);
-        virtual ~Body() = default;
-        void on_before_tick();
-        void on_after_tick();
-        void on_tick(Float duration);
-        void applyForceRel(Vector value, Vector shift);
+	explicit Body(BodyDesc const& description);
+	virtual ~Body() = default;
+	void on_before_tick();
+	void on_after_tick();
+	void on_tick(Float duration);
+	void applyForceRel(Vector value, Vector shift);
 };
 
 struct Simulation
@@ -50,9 +50,9 @@ struct Simulation
 	std::list<Body*> bodies;
 	StepState stst = StepState::Opaque;
 	
-        void on_before_tick();
-        void on_after_tick();
-        void on_tick(Float duration);
+	void on_before_tick();
+	void on_after_tick();
+	void on_tick(Float duration);
 };
 
 struct invalid_state_error: public std::logic_error

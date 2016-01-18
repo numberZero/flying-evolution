@@ -8,7 +8,10 @@ find_package(Eigen3 REQUIRED)
 # find_package(Bullet REQUIRED)
 find_package(SDL2 REQUIRED)
 
-add_executable(subsimulation main.cxx simulation.cxx)
+add_executable(subsimulation
+	main.cxx
+	simulation.cxx
+)
 
 target_include_directories(subsimulation PUBLIC
 # 	${PROJECT_SOURCE_DIR}/lib/
