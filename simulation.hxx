@@ -38,7 +38,7 @@ struct Body
 // methods
 	explicit Body(BodyDesc const& description);
 	virtual ~Body() = default;
-	void on_before_tick();
+	virtual void on_before_tick();
 	void on_after_tick();
 	void on_tick(Float duration);
 	void applyForceRel(Vector value, Vector shift);

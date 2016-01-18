@@ -1,6 +1,7 @@
 #include <iostream>
 #include "GL/gl.h"
 #include "SDL.h"
+#include "ship.hxx"
 #include "simulation.hxx"
 
 SDL_Window *window;
@@ -21,17 +22,16 @@ bool events()
 	return true;
 }
 
-BodyDesc ship_desc{3000.0, 200.0};
-Body ship1(ship_desc);
-Body ship2(ship_desc);
+Ship ship1{Vector{-50.0, -100.0}};
+Ship ship2{Vector{-50.0, 100.0}};
 Simulation sim;
 
 void init()
 {
-	ship1.position = Vector{-50.0, -100.0};
-	ship2.position = Vector{-50.0, 100.0};
-// 	ship1.velocity = Vector{0.0, 10.0};
-// 	ship2.velocity = Vector{10.0, 0.0};
+	ship1.engine_left = 1.0;
+	ship1.engine_right = 1.0;
+	ship2.engine_left = 1.0;
+	ship2.engine_right = 0.0;
 	sim.bodies.push_back(&ship1);
 	sim.bodies.push_back(&ship2);
 }
@@ -68,14 +68,10 @@ void step()
 	t_base = t_now;
 	
 	glClearColor(0.0, 0.0, 0.2, 1.0);
- 	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT);
 	glLoadIdentity();
 	
 	sim.on_before_tick();
-	ship1.applyForceRel(Vector{0.0, 15000.0}, Vector{-8.0, 0.0});
-	ship1.applyForceRel(Vector{0.0, 15000.0}, Vector{8.0, 0.0});
-	ship2.applyForceRel(Vector{0.0, 15000.0}, Vector{-8.0, 0.0});
-// 	ship2.applyForceRel(Vector{0.0, -15000.0}, Vector{8.0, 0.0});
 	sim.on_tick(dt);
 	sim.on_after_tick();
 	

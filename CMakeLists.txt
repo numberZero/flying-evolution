@@ -11,6 +11,7 @@ find_package(SDL2 REQUIRED)
 add_executable(subsimulation
 	main.cxx
 	simulation.cxx
+	ship.cxx
 )
 
 target_include_directories(subsimulation PUBLIC
