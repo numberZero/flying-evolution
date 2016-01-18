@@ -12,6 +12,7 @@ add_executable(subsimulation
 	main.cxx
 	simulation.cxx
 	ship.cxx
+	model.cxx
 )
 
 target_include_directories(subsimulation PUBLIC

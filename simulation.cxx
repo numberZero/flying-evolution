@@ -1,8 +1,9 @@
 #include "simulation.hxx"
+#include <cmath>
 
 std::string invalid_state_error::format_message(const std::string func, StepState expected, StepState real)
 {
-	return "Function " + func + " is called when object is not in the needed state: " + to_string(expected) + " instead of " + to_string(real);
+	return "Function " + func + " is called when object is not in the needed state: " + std::to_string(expected) + " instead of " + std::to_string(real);
 }
 
 invalid_state_error::invalid_state_error(const std::string func, StepState expected, StepState real):
@@ -19,7 +20,7 @@ Body::Body(BodyDesc const& description) :
 {
 }
 
-void Body::on_before_tick()
+void Body::on_before_tick(Float global_time)
 {
 	check_state(StepState::Opaque);
 	force = Vector(0, 0);
@@ -46,8 +47,8 @@ void Body::on_tick(Float duration)
 void Body::applyForceRel(Vector value, Vector shift)
 {
 	Float ang_force(value[1] * shift[0] - value[0] * shift[1]);
-	Float c = cos(rotation);
-	Float s = sin(rotation);
+	Float c = std::cos(rotation);
+	Float s = std::sin(rotation);
 	Vector lin_force(
 		c * value[0] - s * value[1],
 		s * value[0] + c * value[1]);
@@ -59,7 +60,7 @@ void Simulation::on_before_tick()
 {
 	check_state(StepState::Opaque);
 	for(Body* body: bodies)
-		body->on_before_tick();
+		body->on_before_tick(global_time);
 	stst = StepState::Ready;
 }
 

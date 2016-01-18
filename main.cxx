@@ -3,6 +3,7 @@
 #include "SDL.h"
 #include "ship.hxx"
 #include "simulation.hxx"
+#include "model.hxx"
 
 SDL_Window *window;
 SDL_GLContext context;
@@ -22,12 +23,152 @@ bool events()
 	return true;
 }
 
-Ship ship1{Vector{-50.0, -100.0}};
+void textOut(Float x, Float y, Float size, std::string text)
+{
+	Float scale = size / 2.5;
+	glTranslated(x, y, 0);
+	glScaled(scale, scale, scale);
+	Float u = 0;
+	Float v = 0;
+	glBegin(GL_LINES);
+	for(char c: text)
+		switch(c)
+		{
+			case '.':
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 0.50);
+				u += 0.5;
+				break;
+			case '0':
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				u += 1.5;
+				break;
+			case '1':
+				glVertex2d(u + 0.50, v + 1.50);
+				glVertex2d(u + 1.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				u += 1.5;
+				break;
+			case '2':
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 1.00);
+				glVertex2d(u + 1.00, v + 1.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 1.00);
+				glVertex2d(u + 1.00, v + 1.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				u += 1.5;
+				break;
+			case '3':
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 1.00);
+				glVertex2d(u + 1.00, v + 1.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				u += 1.5;
+				break;
+			case '4':
+				glVertex2d(u + 0.00, v + 1.00);
+				glVertex2d(u + 1.00, v + 1.00);
+				glVertex2d(u + 0.00, v + 1.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				u += 1.5;
+				break;
+			case '5':
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 1.00);
+				glVertex2d(u + 1.00, v + 1.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				glVertex2d(u + 0.00, v + 1.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 1.00);
+				u += 1.5;
+				break;
+			case '6':
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 1.00);
+				glVertex2d(u + 1.00, v + 1.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 1.00);
+				u += 1.5;
+				break;
+			case '7':
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				u += 1.5;
+				break;
+			case '8':
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 1.00);
+				glVertex2d(u + 1.00, v + 1.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				u += 1.5;
+				break;
+			case '9':
+				glVertex2d(u + 0.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 0.00, v + 1.00);
+				glVertex2d(u + 1.00, v + 1.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				glVertex2d(u + 0.00, v + 1.00);
+				glVertex2d(u + 0.00, v + 2.00);
+				glVertex2d(u + 1.00, v + 0.00);
+				glVertex2d(u + 1.00, v + 2.00);
+				u += 1.5;
+				break;
+			case '\n':
+				u = 0;
+				v -= 3.0;
+				break;
+		}
+	glEnd();
+}
+
+Program prg1;
+ProgrammedShip ship1{Vector{-50.0, -100.0}, prg1};
 Ship ship2{Vector{-50.0, 100.0}};
 Simulation sim;
 
 void init()
 {
+// 	prg1.code.emplace_back(0.5, 0.4, 0.0);
+	prg1.code.emplace_back(0.5, 0.2, -0.2);
+	prg1.code.emplace_back(0.5, -0.2, 0.2);
+	prg1.code.emplace_back(5.0, 0.4, 0.4);
+	ship1.current_statement = prg1.code.begin();
 	ship1.engine_left = 1.0;
 	ship1.engine_right = 1.0;
 	ship2.engine_left = 1.0;
@@ -38,33 +179,25 @@ void init()
 
 void drawShip(Body const& body)
 {
-	glPushMatrix();
-	glTranslated(body.position[0], body.position[1], 0.0);
-	glRotated(body.rotation * (M_PI / 180.0), 0.0, 0.0, 1.0);
-	
-	glBegin(GL_LINE_LOOP);
-	glVertex2f(-10.0, -7.0);
-	glVertex2f(10.0, 7.0);
-	glVertex2f(10.0, -7.0);
-	glVertex2f(-10.0, 7.0);
-	glEnd();
-	
-	glBegin(GL_LINES);
-	glVertex2f(-4.0, 11.0);
-	glVertex2f(0.0, 15.0);
-	glVertex2f(4.0, 11.0);
-	glVertex2f(0.0, 15.0);
-	glVertex2f(0.0, -15.0);
-	glVertex2f(0.0, 15.0);
-	glEnd();
-	
-	glPopMatrix();
+	ship_model.draw(body.position, body.rotation);
 }
 
 void step()
 {
+	static Float t = 0.0;
+	static long n = 0;
+	static Float fps = 0.0;
 	long t_now = SDL_GetTicks();
 	double dt = (t_now - t_base) * 0.001;
+	t += dt;
+	++n;
+	if(t >= 1.0)
+	{
+		fps = n / t;
+		t = 0;
+		n = 0;
+	}
+	clampIt(dt, 0.02);
 	t_base = t_now;
 	
 	glClearColor(0.0, 0.0, 0.2, 1.0);
@@ -92,6 +225,8 @@ void step()
 		glVertex2f(400, 100.0 * j);
 	}
 	glEnd();
+	
+	textOut(-390.0, 270.0, 20.0, std::to_string(fps));
 	
 	glFlush();
 	glFinish();
