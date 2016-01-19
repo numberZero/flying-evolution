@@ -177,14 +177,7 @@ void restartSimulation()
 void init()
 {
 	prg.reset(new Program);
-	prg->start = Vector{0.0, -250.0};
-	prg->target = Vector{350.0, 50.0};
-	prg->code.emplace_back(1.0, 0.0, 0.0);
-	prg->code.emplace_back(0.5, 0.2, -0.2);
-	prg->code.emplace_back(0.5, -0.2, 0.2);
-	prg->code.emplace_back(5.5, 1.0, 1.0);
 	restartSimulation();
-
 	th.start();
 }
 

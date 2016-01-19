@@ -27,52 +27,59 @@ bool Mediator::take(PProgram& destination)
 void change_program(Program* prog)
 {
 	static std::ranlux24 gen(std::time(nullptr));
-	static std::discrete_distribution<> rnd_mode{1, 1, 8};
+	static std::discrete_distribution<> rnd_mode{7, 3, 90};
+	static std::lognormal_distribution<Float> time_base{-1.0, 0.1};
+	static std::normal_distribution<Float> eng_base{0.0, 0.1};
 	static std::discrete_distribution<> rnd_change{1, 1, 4, 4};
 	static std::lognormal_distribution<Float> time_shift{0.0, 0.1};
 	static std::normal_distribution<Float> eng_shift{0.0, 0.02};
 	static std::bernoulli_distribution d5050;
 	int mode = rnd_mode(gen);
-	if(mode == 2)
+	switch(mode)
 	{
-		int change = rnd_change(gen);
-		std::uniform_int_distribution<> pos(0, prog->code.size() - 1);
-		auto obj = std::next(prog->code.begin(), pos(gen));
-		Float shift;
-		if(change)
-			shift = eng_shift(gen);
-		else
-			shift = time_shift(gen);
-		switch(change)
+		case 2:
 		{
-			case 0: // time
-				obj->duration *= shift;
-				std::cout << obj->duration << "\n";
-				break;
-			case 1: // one engine
-				if(d5050(gen))
+			int change = rnd_change(gen);
+			std::uniform_int_distribution<> pos(0, prog->code.size() - 1);
+			auto obj = std::next(prog->code.begin(), pos(gen));
+			Float shift;
+			if(change)
+				shift = eng_shift(gen);
+			else
+				shift = time_shift(gen);
+			switch(change)
+			{
+				case 0: // time
+					obj->duration *= shift;
+					break;
+				case 1: // one engine
+					if(d5050(gen))
+						obj->engine_left += shift;
+					else
+						obj->engine_right += shift;
+					break;
+				case 2: // both engines, lin.
 					obj->engine_left += shift;
-				else
 					obj->engine_right += shift;
-				break;
-			case 2: // both engines, lin.
-				obj->engine_left += shift;
-				obj->engine_right += shift;
-				break;
-			case 3: // both engines, rot.
-				obj->engine_left += shift;
-				obj->engine_right -= shift;
-				break;
+					break;
+				case 3: // both engines, rot.
+					obj->engine_left += shift;
+					obj->engine_right -= shift;
+					break;
+			}
+			break;
 		}
-	}
-	else
-	{
-		std::uniform_int_distribution<> pos(0, prog->code.size());
-		if(mode)
+		case 1:
 		{
+			std::uniform_int_distribution<> pos(0, prog->code.size() - 1);
+			auto obj = std::next(prog->code.begin(), pos(gen));
+			prog->code.erase(obj);
 		}
-		else
+		case 0:
 		{
+			std::uniform_int_distribution<> pos(0, prog->code.size());
+			auto obj = std::next(prog->code.begin(), pos(gen));
+			prog->code.emplace(obj, time_base(gen), eng_base(gen), eng_base(gen));
 		}
 	}
 }
@@ -120,6 +127,7 @@ void clampProgram(Program* prog, Float t)
 
 void EvolutionThread::execute()
 {
+	static const int pcount = 8;
 	std::cout << "Starting evolution thread" << std::endl;
 	std::cout << "Initializing base program" << std::endl;
 	p.reset(new Program());
@@ -135,16 +143,16 @@ void EvolutionThread::execute()
 	for(;;)
 	{
 		std::cout << "Evolution step started" << std::endl;
-		PProgram ps[4];
-		for(int k = 0; k != 4; ++k)
+		PProgram ps[pcount];
+		for(int k = 0; k != pcount; ++k)
 			ps[k].reset(new Program(*p));
 		m.give(std::move(p));
-		for(int k = 0; k != 4; ++k)
+		for(int k = 1; k != pcount; ++k)
 			change_program(ps[k].get());
 		int id = 0;
 		Float q = 0;
 		Float t = 0;
-		for(int k = 0; k != 4; ++k)
+		for(int k = 0; k != pcount; ++k)
 		{
 			auto q2 = eval_program(ps[k].get(), dt);
 			if(q2.first > q)
@@ -173,6 +181,7 @@ void EvolutionThread::execute()
 					std::cout << "Switching to the high-precision mode" << std::endl;
 				p->target = target;
 				minq = 10.0;
+				dt = 0.001;
 				fin = true;
 			}
 			else
