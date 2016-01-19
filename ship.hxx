@@ -39,6 +39,8 @@ struct Program
 	typedef std::list<Statement> Code;
 	typedef Code::const_iterator Iterator;
 	Code code;
+	Vector start;
+	Vector target;
 };
 
 struct ProgrammedShip: Ship
@@ -49,4 +51,5 @@ struct ProgrammedShip: Ship
 	
 	explicit ProgrammedShip(Vector _position, Program const& _program);
 	void on_tick(Float duration) override;
+	bool isRunning();
 };

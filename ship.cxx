@@ -80,21 +80,26 @@ ProgrammedShip::ProgrammedShip(Vector _position, const Program& _program) :
 
 void ProgrammedShip::on_tick(Float duration)
 {
-	if(current_statement != program.code.end())
+	if(isRunning())
 	{
 		engine_left = current_statement->engine_left;
 		engine_right = current_statement->engine_right;
 		current_statement_shift += duration;
 		if(current_statement_shift > current_statement->duration)
 		{
-			current_statement_shift = 0;
 			++current_statement;
+			current_statement_shift = 0;
 		}
 	}
 	Ship::on_tick(duration);
-	if(current_statement == program.code.end())
+	if(!isRunning())
 	{
 		engine_left = 0.0;
 		engine_right = 0.0;
 	}
+}
+
+bool ProgrammedShip::isRunning()
+{
+	return current_statement != program.code.end();
 }

@@ -1,9 +1,11 @@
 #include <iostream>
-#include "GL/gl.h"
-#include "SDL.h"
+#include <memory>
+#include <GL/gl.h>
+#include <SDL.h>
 #include "ship.hxx"
 #include "simulation.hxx"
 #include "model.hxx"
+#include "evolution.hxx"
 
 SDL_Window *window;
 SDL_GLContext context;
@@ -157,25 +159,43 @@ void textOut(Float x, Float y, Float size, std::string text)
 	glEnd();
 }
 
-Program prg1;
-ProgrammedShip ship1{Vector{-50.0, -100.0}, prg1};
-Ship ship2{Vector{-50.0, 100.0}};
-Simulation sim;
+std::unique_ptr<Program> prg;
+std::unique_ptr<ProgrammedShip> ship;
+std::unique_ptr<Simulation> sim;
+EvolutionThread th;
+
+void restartSimulation()
+{
+	sim.reset();
+	ship.reset();
+	th.m.take(prg);
+	ship.reset(new ProgrammedShip{prg->start, *prg.get()});
+	sim.reset(new Simulation);
+	sim->bodies.push_back(ship.get());
+}
 
 void init()
 {
-	prg1.code.emplace_back(1.0, 0.0, 0.0);
-	prg1.code.emplace_back(0.5, 0.2, -0.2);
-	prg1.code.emplace_back(0.5, -0.2, 0.2);
-	prg1.code.emplace_back(5.0, 1.0, 1.0);
-//	prg1.code.emplace_back(5.0, 0.4, 0.4);
-	ship1.current_statement = prg1.code.begin();
-	ship1.engine_left = 1.0;
-	ship1.engine_right = 1.0;
-	ship2.engine_left = 1.0;
-	ship2.engine_right = 0.0;
-	sim.bodies.push_back(&ship1);
-	sim.bodies.push_back(&ship2);
+	prg.reset(new Program);
+	prg->start = Vector{0.0, -250.0};
+	prg->target = Vector{350.0, 50.0};
+	prg->code.emplace_back(1.0, 0.0, 0.0);
+	prg->code.emplace_back(0.5, 0.2, -0.2);
+	prg->code.emplace_back(0.5, -0.2, 0.2);
+	prg->code.emplace_back(5.5, 1.0, 1.0);
+	restartSimulation();
+
+	th.start();
+}
+
+void drawCross(Vector pos, Float r)
+{
+	glBegin(GL_LINES);
+	glVertex2f(pos[0] - r, pos[1] - r);
+	glVertex2f(pos[0] + r, pos[1] + r);
+	glVertex2f(pos[0] - r, pos[1] + r);
+	glVertex2f(pos[0] + r, pos[1] - r);
+	glEnd();
 }
 
 void drawShip(Ship const& ship)
@@ -240,21 +260,23 @@ void step()
 	tjitter += jitter;
 	jitter -= dt;
 	
+	if(!ship->isRunning())
+		restartSimulation();
+	
 	glClearColor(0.0, 0.0, 0.2, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glLoadIdentity();
 	
 	if(jitter < 0)
 	{
-		sim.on_before_tick();
-		sim.on_tick(step);
-		sim.on_after_tick();
+		sim->on_before_tick();
+		sim->on_tick(step);
+		sim->on_after_tick();
 		jitter += step;
 	}
 	
 	glColor4f(1.0, 1.0, 1.0, 1.0);
-	drawShip(ship1);
-	drawShip(ship2);
+	drawShip(*ship);
 	
 	glColor4f(1.0, 1.0, 0.0, 0.2);
 	glBegin(GL_LINES);
@@ -270,6 +292,10 @@ void step()
 	}
 	glEnd();
 	
+	glColor4f(1.0, 0.0, 0.0, 1.0);
+	drawCross(prg->target, 5.0);
+	
+	glColor4f(0.0, 1.0, 0.0, 0.5);
 	textOut(-390.0, 270.0, 20.0, std::to_string(fps) + "\n" + std::to_string(mjitter));
 	
 	glFlush();
