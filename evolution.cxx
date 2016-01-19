@@ -24,62 +24,80 @@ bool Mediator::take(PProgram& destination)
 	return false;
 }
 
-void change_program(Program* prog)
+static std::ranlux24 gen(std::time(nullptr));
+static std::bernoulli_distribution d5050;
+static std::uniform_real_distribution<Float> duni{0.0, 1.0};
+
+void change_statement(Statement* obj)
 {
-	static std::ranlux24 gen(std::time(nullptr));
-	static std::discrete_distribution<> rnd_mode{7, 3, 90};
-	static std::lognormal_distribution<Float> time_base{-1.0, 0.1};
-	static std::normal_distribution<Float> eng_base{0.0, 0.1};
 	static std::discrete_distribution<> rnd_change{1, 1, 4, 4};
 	static std::lognormal_distribution<Float> time_shift{0.0, 0.1};
 	static std::normal_distribution<Float> eng_shift{0.0, 0.02};
-	static std::bernoulli_distribution d5050;
-	int mode = rnd_mode(gen);
+	int change = rnd_change(gen);
+	Float shift;
+	if(change)
+		shift = eng_shift(gen);
+	else
+		shift = time_shift(gen);
+	switch(change)
+	{
+		case 0: // time
+			obj->duration *= shift;
+			break;
+		case 1: // one engine
+			if(d5050(gen))
+				obj->engine_left += shift;
+			else
+				obj->engine_right += shift;
+			break;
+		case 2: // both engines, lin.
+			obj->engine_left += shift;
+			obj->engine_right += shift;
+			break;
+		case 3: // both engines, rot.
+			obj->engine_left += shift;
+			obj->engine_right -= shift;
+			break;
+	}
+}
+
+void change_program(Program* prog, bool allow_split = false)
+{
+	static std::discrete_distribution<> rnd_mode{85, 7, 3, 5};
+	static std::discrete_distribution<> rnd_mode_ns{90, 7, 3};
+	static std::lognormal_distribution<Float> time_base{-1.0, 0.1};
+	static std::normal_distribution<Float> eng_base{0.0, 0.1};
+	std::uniform_int_distribution<> rnd_pos(0, prog->code.size() - 1);
+	int mode = (allow_split ? rnd_mode : rnd_mode_ns)(gen);
 	switch(mode)
 	{
-		case 2:
-		{
-			int change = rnd_change(gen);
-			std::uniform_int_distribution<> pos(0, prog->code.size() - 1);
-			auto obj = std::next(prog->code.begin(), pos(gen));
-			Float shift;
-			if(change)
-				shift = eng_shift(gen);
-			else
-				shift = time_shift(gen);
-			switch(change)
-			{
-				case 0: // time
-					obj->duration *= shift;
-					break;
-				case 1: // one engine
-					if(d5050(gen))
-						obj->engine_left += shift;
-					else
-						obj->engine_right += shift;
-					break;
-				case 2: // both engines, lin.
-					obj->engine_left += shift;
-					obj->engine_right += shift;
-					break;
-				case 3: // both engines, rot.
-					obj->engine_left += shift;
-					obj->engine_right -= shift;
-					break;
-			}
-			break;
-		}
 		case 1:
-		{
-			std::uniform_int_distribution<> pos(0, prog->code.size() - 1);
-			auto obj = std::next(prog->code.begin(), pos(gen));
-			prog->code.erase(obj);
-		}
+			rnd_pos = std::uniform_int_distribution<> (0, prog->code.size());
+			break;
+	}
+	auto pobj = std::next(prog->code.begin(), rnd_pos(gen));
+	switch(mode)
+	{
 		case 0:
+			change_statement(&*pobj);
+			break;
+		case 1:
+			prog->code.emplace(pobj, time_base(gen), eng_base(gen), eng_base(gen));
+			break;
+		case 2:
+			prog->code.erase(pobj);
+			break;
+		case 3:
 		{
-			std::uniform_int_distribution<> pos(0, prog->code.size());
-			auto obj = std::next(prog->code.begin(), pos(gen));
-			prog->code.emplace(obj, time_base(gen), eng_base(gen), eng_base(gen));
+			auto pobj2 = prog->code.emplace(pobj, *pobj);
+			Float c = duni(gen);
+			pobj2->duration *= c;
+			pobj->duration *= 1 - c;
+			if(d5050(gen))
+				change_statement(&*pobj);
+			else
+				change_statement(&*pobj2);
+			break;
 		}
 	}
 }
