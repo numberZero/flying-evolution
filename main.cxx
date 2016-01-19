@@ -164,10 +164,11 @@ Simulation sim;
 
 void init()
 {
-// 	prg1.code.emplace_back(0.5, 0.4, 0.0);
+	prg1.code.emplace_back(1.0, 0.0, 0.0);
 	prg1.code.emplace_back(0.5, 0.2, -0.2);
 	prg1.code.emplace_back(0.5, -0.2, 0.2);
-	prg1.code.emplace_back(5.0, 0.4, 0.4);
+	prg1.code.emplace_back(5.0, 1.0, 1.0);
+//	prg1.code.emplace_back(5.0, 0.4, 0.4);
 	ship1.current_statement = prg1.code.begin();
 	ship1.engine_left = 1.0;
 	ship1.engine_right = 1.0;
@@ -177,9 +178,41 @@ void init()
 	sim.bodies.push_back(&ship2);
 }
 
-void drawShip(Body const& body)
+void drawShip(Ship const& ship)
 {
-	ship_model.draw(body.position, body.rotation);
+	static const Float base_x = 10.0;
+	static const Float base_y = 7.0;
+	static const Float size_x = 5.0;
+	static const Float size_y = 20.0;
+	Float x, y, sx, sy;
+	glPushMatrix();
+	glTranslated(ship.position[0], ship.position[1], 0.0);
+	glRotated((180.0 / M_PI) * ship.rotation, 0.0, 0.0, 1.0);
+	glColor4f(1.00, 1.00, 1.00, 1.00);
+	ship_model.draw();
+	glColor4f(1.00, 0.50, 0.00, 1.00);
+	glBegin(GL_QUADS);
+	
+	x = -base_x;
+	y = -std::copysign(base_y, ship.engine_left);
+	sx = 0.5 * size_x * std::pow(std::abs(ship.engine_left), 0.25);
+	sy = -0.5 * size_y * ship.engine_left;
+	glVertex2f(x, y);
+	glVertex2f(x + sx, y + sy);
+	glVertex2f(x, y + 2.0 * sy);
+	glVertex2f(x - sx, y + sy);
+	
+	x = base_x;
+	y = -std::copysign(base_y, ship.engine_right);
+	sx = 0.5 * size_x * std::pow(std::abs(ship.engine_right), 0.25);
+	sy = -0.5 * size_y * ship.engine_right;
+	glVertex2f(x, y);
+	glVertex2f(x + sx, y + sy);
+	glVertex2f(x, y + 2.0 * sy);
+	glVertex2f(x - sx, y + sy);
+	
+	glEnd();
+	glPopMatrix();
 }
 
 void step()
@@ -187,26 +220,37 @@ void step()
 	static Float t = 0.0;
 	static long n = 0;
 	static Float fps = 0.0;
+	static Float jitter = 0.0;
+	static Float tjitter = 0.0;
+	static Float mjitter = 0.0;
+	static const Float step = 0.02;
 	long t_now = SDL_GetTicks();
 	double dt = (t_now - t_base) * 0.001;
+	t_base = t_now;
 	t += dt;
 	++n;
 	if(t >= 1.0)
 	{
 		fps = n / t;
+		mjitter = tjitter / n;
+		tjitter = 0;
 		t = 0;
 		n = 0;
 	}
-	clampIt(dt, 0.02);
-	t_base = t_now;
+	tjitter += jitter;
+	jitter -= dt;
 	
 	glClearColor(0.0, 0.0, 0.2, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glLoadIdentity();
 	
-	sim.on_before_tick();
-	sim.on_tick(dt);
-	sim.on_after_tick();
+	if(jitter < 0)
+	{
+		sim.on_before_tick();
+		sim.on_tick(step);
+		sim.on_after_tick();
+		jitter += step;
+	}
 	
 	glColor4f(1.0, 1.0, 1.0, 1.0);
 	drawShip(ship1);
@@ -226,12 +270,11 @@ void step()
 	}
 	glEnd();
 	
-	textOut(-390.0, 270.0, 20.0, std::to_string(fps));
+	textOut(-390.0, 270.0, 20.0, std::to_string(fps) + "\n" + std::to_string(mjitter));
 	
 	glFlush();
 	glFinish();
 	SDL_GL_SwapWindow(window);
-	
 }
 
 void run()
@@ -254,6 +297,7 @@ void initGL()
 	glDisable(GL_LIGHTING);
 	glDisable(GL_DEPTH);
 	
+	glEnable(GL_POLYGON_SMOOTH);
 	glEnable(GL_LINE_SMOOTH);
 	glLineWidth(1.5);
 	

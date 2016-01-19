@@ -12,7 +12,7 @@ static struct ShipModelBuilder
 	{
 		ModelBuilder bld;
 		ModelBuilder bld2;
-		Float m, rho;
+		Float m, rho, r;
 
 		std::cout << "Subtotal: " << bld.getMass() << " kg" << std::endl;
 
@@ -32,12 +32,10 @@ static struct ShipModelBuilder
 		std::cout << "Subtotal: " << bld.getMass() << " kg" << std::endl;
 		bld2.clear();
 
+		r = 4.0;
 		m = 3000 - bld.getMass();
-		rho = m / 24.0;
-		bld2.line(rho, Vector{-2.00, -4.00}, Vector{-2.00, 4.00});
-		bld2.line(rho, Vector{2.00, -4.00}, Vector{2.00, 4.00});
-		bld2.line(rho, Vector{-2.00, -4.00}, Vector{2.00, -4.00});
-		bld2.line(rho, Vector{-2.00, 4.00}, Vector{2.00, 4.00});
+		rho = m / (M_PI * r * r);
+		bld2.disk(rho, Vector{0.00, 0.00}, r);
 		bld.merge(bld2, -bld2.getCenter());
 		std::cout << "Cabin: " << bld2.getMass() << " kg" << std::endl;
 		std::cout << "Subtotal: " << bld.getMass() << " kg" << std::endl;
@@ -67,8 +65,8 @@ void Ship::on_tick(Float duration)
 {
 	clampIt(engine_left, 1.0);
 	clampIt(engine_right, 1.0);
-	applyForceRel(Vector{0.0, ship_engine_force * engine_left}, Vector{-8.0, 0.0});
-	applyForceRel(Vector{0.0, ship_engine_force * engine_right}, Vector{8.0, 0.0});
+	applyForceRel(Vector{0.0, ship_engine_force * engine_left}, Vector{-10.0, -7.0});
+	applyForceRel(Vector{0.0, ship_engine_force * engine_right}, Vector{10.0, -7.0});
 	Body::on_tick(duration);
 }
 
@@ -89,7 +87,7 @@ void ProgrammedShip::on_tick(Float duration)
 		current_statement_shift += duration;
 		if(current_statement_shift > current_statement->duration)
 		{
-			current_statement_shift -= current_statement->duration;
+			current_statement_shift = 0;
 			++current_statement;
 		}
 	}

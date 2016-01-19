@@ -23,28 +23,24 @@ struct Model
 	typedef std::vector<Index> Indices;
 
 	Vertices vertices;
-	Indices indices1; // points
-	Indices indices2; // lines
-	Indices indices3; // triangles
+	Indices indices;
 
 	void draw() const;
 	void draw(Vector position, Float rotation, Float scale = 1.0) const;
-
-	void drawIndices(Indices const& indices) const;
 };
 
 class ModelBuilder
 {
 private:
 	typedef std::deque<Vector> Vertices;
+	typedef std::deque<Index> Indices;
 
 	Vector mass_shift;
 	Float mass;
 	Float inertia_tensor;
 
-	Vertices points;
-	Vertices lines;
-	Vertices triangles;
+	Vertices vertices;
+	Indices indices;
 
 public:
 	ModelBuilder();
@@ -59,16 +55,12 @@ public:
 	void centralize();
 	void clear();
 
-	void point(Float mass, Vector position);
+	void point(Float mass, Vector position, Float visual_radius = 1.0, int visual_segments = 6);
 
-	void circle(Float linear_density, Vector center, Float radius);
-	void line(Float linear_density, Vector a, Vector b);
+	void circle(Float linear_density, Vector center, Float radius, Float visual_thickness = 1.0, int visual_segments = 24);
+	void line(Float linear_density, Vector a, Vector b, Float visual_thickness = 1.0);
 
-	void disk(Float density, Vector center, Float radius);
-	void triangle(Float linear_density, Vector a, Vector b, Vector c);
+	void disk(Float density, Vector center, Float radius, int visual_segments = 24);
+	void triangle(Float density, Vector a, Vector b, Vector c);
 	void quad(Float density, Vector vertex, Vector side1, Vector side2);
-
-private:
-	static void mergeList(Vertices& to, Vertices const& from, Vector position);
-	static void shiftList(Vertices& vs, Vector by);
 };
