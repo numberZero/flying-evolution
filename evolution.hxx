@@ -34,7 +34,7 @@ private:
 	std::unique_ptr<std::thread> t;
 	std::list<EvolutionProgramDesc*> programs;
 
-	void real_build_program(Program const *base, ProgramDesc *desc, bool use_hp = true);
+	bool real_build_program(Program const *base, ProgramDesc *desc, bool use_hp = true);
 	void build_program(EvolutionProgramDesc *desc);
 	EvolutionProgramDesc *init_base_program(Float len);
 	void init_program_list(Float len, Float side, Float step = 10.0);

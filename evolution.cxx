@@ -106,21 +106,54 @@ std::pair<Float, Float> eval_program(ProgramDesc const *desc, Float dt = 0.01)
 	ProgrammedShip ship(desc->start, *desc->program);
 	Float q = 0;
 	Float t = 0;
+#ifdef PENALTY_ROTATION
+	Float r0 = 0;
+#endif
 	sim.bodies.push_back(&ship);
 	while(ship.isRunning())
 	{
 		sim.on_before_tick();
 		sim.on_tick(dt);
 		sim.on_after_tick();
-		Float q2 = 100.0 / (ship.state.position - desc->finish.position).squaredNorm();
-		if(q2 > q)
+		if(std::abs(ship.state.angular_veloctiy) > 2.0) // ≈ 120°/s (1 rotation per 3 seconds)
+			break; // too high angular velocity at this point
+
+		Float b_total = 0.0;
+		Float q_total = 100.0;
+
+		Float b_pos = (ship.state.position - desc->finish.position).squaredNorm();
+		b_total += b_pos;
+
+#ifdef CHECK_VELOCITY
+		Float b_vel =  0.1 * (ship.state.velocity - desc->finish.velocity).squaredNorm();
+		b_total += b_vel;
+#endif
+#ifdef CHECK_ROTATION
+		Float b_rot = 5.0 * (1.0 - std::cos(ship.state.rotation - desc->finish.rotation));
+		b_total += b_rot * b_rot;
+#endif
+#ifdef CHECK_RVEL
+		Float b_rvel = 1.0 * std::abs(ship.state.angular_veloctiy);
+		b_total += b_rvel * b_rvel;
+#endif
+#ifdef CHECK_TIME
+		Float b_time = 0.1 * sim.global_time;
+		b_total += b_time;
+#endif
+#ifdef PENALTY_ROTATION
+		r0 += dt * std::abs(ship.state.angular_veloctiy);
+		Float p_rot = std::exp(-0.2 * r0 / (2.0 * M_PI));
+		q_total *= p_rot;
+#endif
+
+		q_total /= b_total;
+		if(q_total > q)
 		{
-			q = q2;
+			q = q_total;
 			t = sim.global_time;
 		}
 	}
 	return{q, t};
-// 	return 100.0 / (ship.position - prog->target).squaredNorm();
 }
 
 void clampProgram(Program* prog, Float t)
@@ -141,7 +174,7 @@ void clampProgram(Program* prog, Float t)
 	prog->code.erase(i, prog->code.end());
 }
 
-void EvolutionThread::real_build_program(Program const *base, ProgramDesc *desc, bool use_hp)
+bool EvolutionThread::real_build_program(Program const *base, ProgramDesc *desc, bool use_hp)
 {
 	if(desc->program)
 		throw std::logic_error("Program already built: " + desc->name);
@@ -150,6 +183,7 @@ void EvolutionThread::real_build_program(Program const *base, ProgramDesc *desc,
 	Float dt = 0.01;
 	Float minq = 1.0;
 	Float q = 0;
+	long n = 100;
 	std::unique_ptr<Program> current;
 	while(q < minq)
 	{
@@ -163,8 +197,9 @@ void EvolutionThread::real_build_program(Program const *base, ProgramDesc *desc,
 		q = 0;
 		for(int k = 0; k != pcount; ++k)
 		{
-			desc->program = ps[k].get();
-			auto q2 = eval_program(desc, dt);
+			ProgramDesc mydesc(*desc);
+			mydesc.program = ps[k].get();
+			auto q2 = eval_program(&mydesc, dt);
 			if(q2.first > q)
 			{
 				q = q2.first;
@@ -182,9 +217,12 @@ void EvolutionThread::real_build_program(Program const *base, ProgramDesc *desc,
 			use_hp = false;
 			minq = 10.0;
 		}
+		if(--n <= 0)
+			return false;
 	}
 	std::cout << "Program built with quality: " << q  << std::endl;
 	desc->program = current.release();
+	return true;
 }
 
 void EvolutionThread::build_program(EvolutionProgramDesc *desc)
@@ -195,7 +233,8 @@ void EvolutionThread::build_program(EvolutionProgramDesc *desc)
 		throw std::logic_error("Can't build a program without a base: " + desc->name);
 	if(!desc->base->program)
 		build_program(desc->base);
-	real_build_program(desc->base->program, desc);
+	while(!real_build_program(desc->base->program, desc))
+		std::cout << "Evolution failed for " << desc->name << ", restarting" << std::endl;
 	m.give(desc);
 }
 
