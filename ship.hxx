@@ -17,6 +17,7 @@ struct Ship: Body
 	Float engine_right = 0.0;
 	
 	explicit Ship(Vector _position);
+	explicit Ship(BodyState const& _state);
 	void on_tick(Float duration) override;
 };
 
@@ -39,8 +40,6 @@ struct Program
 	typedef std::list<Statement> Code;
 	typedef Code::const_iterator Iterator;
 	Code code;
-	Vector start;
-	Vector target;
 };
 
 struct ProgrammedShip: Ship
@@ -50,6 +49,7 @@ struct ProgrammedShip: Ship
 	Float current_statement_shift;
 	
 	explicit ProgrammedShip(Vector _position, Program const& _program);
+	explicit ProgrammedShip(BodyState const& _state, Program const& _program);
 	void on_tick(Float duration) override;
 	bool isRunning();
 };

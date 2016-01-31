@@ -1,24 +1,22 @@
 #include "evolution.hxx"
+#include <cmath>
 #include <functional>
 #include <iostream>
 #include <random>
 
 #define SYNCHRONIZED	Lock _328514_guard(mtx)
 
-bool Mediator::give(PProgram&& source)
+bool Mediator::give(ProgramDesc const *source)
 {
-	SYNCHRONIZED;
-	bool result = !program;
-	program = std::move(source);
-	return result;
+	program.store(source);
 }
 
-bool Mediator::take(PProgram& destination)
+bool Mediator::take(ProgramDesc const *& destination)
 {
-	SYNCHRONIZED;
-	if(program)
+	ProgramDesc const *p = program.load();
+	if(p)
 	{
-		destination = std::move(program);
+		destination = p;
 		return true;
 	}
 	return false;
@@ -102,10 +100,10 @@ void change_program(Program* prog, bool allow_split = false)
 	}
 }
 
-std::pair<Float, Float> eval_program(Program* prog, Float dt = 0.01)
+std::pair<Float, Float> eval_program(ProgramDesc const *desc, Float dt = 0.01)
 {
 	Simulation sim;
-	ProgrammedShip ship(prog->start, *prog);
+	ProgrammedShip ship(desc->start, *desc->program);
 	Float q = 0;
 	Float t = 0;
 	sim.bodies.push_back(&ship);
@@ -114,7 +112,7 @@ std::pair<Float, Float> eval_program(Program* prog, Float dt = 0.01)
 		sim.on_before_tick();
 		sim.on_tick(dt);
 		sim.on_after_tick();
-		Float q2 = 100.0 / (ship.position - prog->target).squaredNorm();
+		Float q2 = 100.0 / (ship.state.position - desc->finish.position).squaredNorm();
 		if(q2 > q)
 		{
 			q = q2;
@@ -143,36 +141,30 @@ void clampProgram(Program* prog, Float t)
 	prog->code.erase(i, prog->code.end());
 }
 
-void EvolutionThread::execute()
+void EvolutionThread::real_build_program(Program const *base, ProgramDesc *desc, bool use_hp)
 {
-	static const int pcount = 8;
-	std::cout << "Starting evolution thread" << std::endl;
-	std::cout << "Initializing base program" << std::endl;
-	p.reset(new Program());
-	p->start = Vector(0.0, -200.0);
-	p->target = Vector(0.0, 200.0);
-	p->code.emplace_back(0.5, 0.0, 0.0);
-	p->code.emplace_back(std::sqrt(800.0 / ship_full_acceleration), 1.0, 1.0);
-	p->code.emplace_back(0.5, 0.0, 0.0);
+	if(desc->program)
+		throw std::logic_error("Program already built: " + desc->name);
 	std::cout << "Evolution!" << std::endl;
-	Float dt = 0.001;
+	static const int pcount = 8;
+	Float dt = 0.01;
 	Float minq = 1.0;
-	bool fin = false;
-	for(;;)
+	Float q = 0;
+	std::unique_ptr<Program> current;
+	while(q < minq)
 	{
-		std::cout << "Evolution step started" << std::endl;
-		PProgram ps[pcount];
+		std::unique_ptr<Program> ps[pcount];
 		for(int k = 0; k != pcount; ++k)
-			ps[k].reset(new Program(*p));
-		m.give(std::move(p));
+			ps[k].reset(new Program(*base));
 		for(int k = 1; k != pcount; ++k)
 			change_program(ps[k].get());
 		int id = 0;
-		Float q = 0;
 		Float t = 0;
+		q = 0;
 		for(int k = 0; k != pcount; ++k)
 		{
-			auto q2 = eval_program(ps[k].get(), dt);
+			desc->program = ps[k].get();
+			auto q2 = eval_program(desc, dt);
 			if(q2.first > q)
 			{
 				q = q2.first;
@@ -180,41 +172,120 @@ void EvolutionThread::execute()
 				id = k;
 			}
 		}
-		p = std::move(ps[id]);
-		clampProgram(p.get(), t);
+		current = std::move(ps[id]);
+		clampProgram(current.get(), t);
+		base = current.get();
 		std::cout << "Evolution step finished: " << q  << std::endl;
-		if(q > minq)
+		if(use_hp && (q > minq))
 		{
-			std::cout << "Local goal reached" << std::endl;
-			Vector shift = target - p->target;
-			Float len = shift.norm();
-			if(fin)
-			{
-				std::cout << "Evolution finished succesfully!" << std::endl;
-				return;
-			}
-			if(len < 10.0)
-			{
-				if(!fin)
-					std::cout << "Switching to the high-precision mode" << std::endl;
-				p->target = target;
-				minq = 10.0;
-				dt = 0.001;
-				fin = true;
-			}
-			else
-			{
-				p->target += (10.0 / len) * shift;
-			}
+			std::cout << "Switching to the high-precision mode" << std::endl;
+			use_hp = false;
+			minq = 10.0;
 		}
 	}
+	std::cout << "Program built with quality: " << q  << std::endl;
+	desc->program = current.release();
+}
+
+void EvolutionThread::build_program(EvolutionProgramDesc *desc)
+{
+	if(desc->program)
+		throw std::logic_error("Program already built: " + desc->name);
+	if(!desc->base)
+		throw std::logic_error("Can't build a program without a base: " + desc->name);
+	if(!desc->base->program)
+		build_program(desc->base);
+	real_build_program(desc->base->program, desc);
+	m.give(desc);
+}
+
+EvolutionProgramDesc *EvolutionThread::init_base_program(Float len)
+{
+	std::cout << "Initializing base program" << std::endl;
+	EvolutionProgramDesc *desc = new EvolutionProgramDesc();
+	desc->base = nullptr;
+	desc->name = "base";
+	desc->start.position = Vector(0.0, 0.0);
+	desc->finish.position = Vector(0.0, len);
+	desc->program = new Program();
+	desc->program->code.emplace_back(0.5, 0.0, 0.0);
+	desc->program->code.emplace_back(std::sqrt(len / ship_full_acceleration), 1.0, 1.0);
+	desc->program->code.emplace_back(std::sqrt(len / ship_full_acceleration), -1.0, -1.0);
+	desc->program->code.emplace_back(0.5, 0.0, 0.0);
+	return desc;
+}
+
+void EvolutionThread::init_program_list(Float len, Float side, Float step)
+{
+	EvolutionProgramDesc **table;
+	EvolutionProgramDesc *base = init_base_program(len);
+	std::cout << "Initializing program table" << std::endl;
+	programs.push_back(base);
+	long nx = std::ceil(side / step);
+	long ny = std::ceil(len / step);
+	Float dx = side / nx;
+	Float dy = len / ny;
+	++nx;
+	++ny;
+	table = new EvolutionProgramDesc * [nx * ny];
+	table[nx * (ny - 1)] = base;
+	for(long j = 0; j != ny; ++j)
+		for(long i = 0; i != nx; ++i)
+		{
+			long k = i + nx * j;
+			if((j != ny - 1) || (i != 0))
+				table[k] = new EvolutionProgramDesc();
+			table[k]->name += "(" + std::to_string(i) + ", " + std::to_string(j) + ")";
+		}
+	for(long j = 0; j != ny; ++j)
+		for(long i = 0; i != nx; ++i)
+		{
+			long k = i + nx * j;
+			long i2 = 2 * i >= j ? i + 1 : i;
+			long j2 = 2 * j >= i ? j + 1 : j;
+			if((i2 >= nx) || (j2 >= ny))
+			{
+				if(j == ny - 1)
+				{
+					if(i == 0)
+						continue;
+					i2 = i - 1;
+					j2 = j;
+				}
+				else if(i == nx - 1)
+				{
+					i2 = i;
+					j2 = j + 1;
+				}
+				else
+					throw std::logic_error("Invalid table position");
+			}
+// 			std::cout << "(" << i << ", " << j << ") ← (" << i2 << ", " << j2 << ")" << std::endl;
+			long k0 = i2 + nx * j2;
+			table[k]->base = table[k0];
+			table[k]->program = nullptr;
+			table[k]->start = base->start;
+			table[k]->finish.position = Vector(i * dx, j * dy);
+			programs.push_back(table[k]);
+		}
+	delete[] table;
+}
+
+void EvolutionThread::execute()
+{
+	std::cout << "Starting evolution thread" << std::endl;
+	init_program_list(200.0, 300.0);
+	std::cout << "Running evolution" << std::endl;
+	for(EvolutionProgramDesc* p: programs)
+		if(!p->program)
+			build_program(p);
+	std::cout << "All programs built (" << programs.size() << " total)" << std::endl;
 }
 
 void EvolutionThread::start()
 {
 	if(t)
 		return;
-	target = Vector(300.0, -200.0);
 	t.reset(new std::thread(&EvolutionThread::execute, this));
 	t->detach();
 }

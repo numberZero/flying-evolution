@@ -1,31 +1,43 @@
 #pragma once
-#include <memory>
-#include <mutex>
+#include <atomic>
+#include <list>
 #include <thread>
 #include "ship.hxx"
 
-typedef std::unique_ptr<Program> PProgram;
+struct ProgramDesc
+{
+	Program *program;
+	std::string name;
+	BodyState start;
+	BodyState finish;
+};
 
 struct Mediator
 {
 private:
-	typedef std::mutex Mutex;
-	typedef std::lock_guard<Mutex> Lock;
-	Mutex mtx;
-	PProgram program;
+	std::atomic<ProgramDesc const *> program;
 
 public:
-	bool give(PProgram&& source);
-	bool take(PProgram& destination);
+	bool give(ProgramDesc const *source);
+	bool take(ProgramDesc const *& destination);
+};
+
+struct EvolutionProgramDesc:
+	ProgramDesc
+{
+	EvolutionProgramDesc *base;
 };
 
 struct EvolutionThread
 {
 private:
 	std::unique_ptr<std::thread> t;
-	PProgram p;
-	Vector target;
+	std::list<EvolutionProgramDesc*> programs;
 
+	void real_build_program(Program const *base, ProgramDesc *desc, bool use_hp = true);
+	void build_program(EvolutionProgramDesc *desc);
+	EvolutionProgramDesc *init_base_program(Float len);
+	void init_program_list(Float len, Float side, Float step = 10.0);
 	void execute();
 
 public:

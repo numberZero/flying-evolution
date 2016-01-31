@@ -159,7 +159,8 @@ void textOut(Float x, Float y, Float size, std::string text)
 	glEnd();
 }
 
-std::unique_ptr<Program> prg;
+ProgramDesc base_prg;
+ProgramDesc const *prg;
 std::unique_ptr<ProgrammedShip> ship;
 std::unique_ptr<Simulation> sim;
 EvolutionThread th;
@@ -169,14 +170,15 @@ void restartSimulation()
 	sim.reset();
 	ship.reset();
 	th.m.take(prg);
-	ship.reset(new ProgrammedShip{prg->start, *prg.get()});
+	ship.reset(new ProgrammedShip(prg->start, *prg->program));
 	sim.reset(new Simulation);
 	sim->bodies.push_back(ship.get());
 }
 
 void init()
 {
-	prg.reset(new Program);
+	base_prg.program = new Program();
+	prg = &base_prg;
 	restartSimulation();
 	th.start();
 }
@@ -199,8 +201,8 @@ void drawShip(Ship const& ship)
 	static const Float size_y = 20.0;
 	Float x, y, sx, sy;
 	glPushMatrix();
-	glTranslated(ship.position[0], ship.position[1], 0.0);
-	glRotated((180.0 / M_PI) * ship.rotation, 0.0, 0.0, 1.0);
+	glTranslated(ship.state.position[0], ship.state.position[1], 0.0);
+	glRotated((180.0 / M_PI) * ship.state.rotation, 0.0, 0.0, 1.0);
 	glColor4f(1.00, 1.00, 1.00, 1.00);
 	ship_model.draw();
 	glColor4f(1.00, 0.50, 0.00, 1.00);
@@ -286,7 +288,7 @@ void step()
 	glEnd();
 	
 	glColor4f(1.0, 0.0, 0.0, 1.0);
-	drawCross(prg->target, 5.0);
+	drawCross(prg->finish.position, 5.0);
 	
 	glColor4f(0.0, 1.0, 0.0, 0.5);
 	textOut(-390.0, 270.0, 20.0, std::to_string(fps) + "\n" + std::to_string(mjitter));

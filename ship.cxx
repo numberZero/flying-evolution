@@ -58,7 +58,12 @@ const Float ship_engine_acceleration = ship_full_acceleration / 2.0;
 Ship::Ship(Vector _position) :
 	Body(ship_desc)
 {
-	position = _position;
+	state.position = _position;
+}
+
+Ship::Ship(BodyState const& _state) :
+	Body(ship_desc, _state)
+{
 }
 
 void Ship::on_tick(Float duration)
@@ -70,8 +75,16 @@ void Ship::on_tick(Float duration)
 	Body::on_tick(duration);
 }
 
-ProgrammedShip::ProgrammedShip(Vector _position, const Program& _program) :
+ProgrammedShip::ProgrammedShip(Vector _position, Program const& _program) :
 	Ship(_position),
+	program(_program),
+	current_statement(program.code.begin()),
+	current_statement_shift(0.0)
+{
+}
+
+ProgrammedShip::ProgrammedShip(BodyState const& _state, Program const& _program) :
+	Ship(_state),
 	program(_program),
 	current_statement(program.code.begin()),
 	current_statement_shift(0.0)

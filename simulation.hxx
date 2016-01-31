@@ -1,7 +1,6 @@
 #pragma once
 #include <list>
 #include <stdexcept>
-#include <Eigen/Core>
 #include "types.hxx"
 
 enum class StepState
@@ -11,16 +10,20 @@ enum class StepState
 	Dirty,
 };
 
-struct Body
+struct BodyState
 {
-// static data
-	BodyDesc const& desc;
-
-// body state
 	Vector position;
 	Vector velocity;
 	Float rotation;
 	Float angular_veloctiy;
+
+	BodyState();
+};
+
+struct Body
+{
+	BodyDesc const& desc;
+	BodyState state;
 
 // temporary storage
 	StepState stst = StepState::Opaque;
@@ -29,6 +32,7 @@ struct Body
 
 // methods
 	explicit Body(BodyDesc const& description);
+	explicit Body(BodyDesc const& description, BodyState const& initial_state);
 	virtual ~Body() = default;
 	virtual void on_before_tick(Float global_time);
 	virtual void on_after_tick();
@@ -41,7 +45,7 @@ struct Simulation
 	Float global_time = 0;
 	std::list<Body*> bodies;
 	StepState stst = StepState::Opaque;
-	
+
 	void on_before_tick();
 	void on_after_tick();
 	void on_tick(Float duration);
