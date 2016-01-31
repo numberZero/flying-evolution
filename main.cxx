@@ -269,6 +269,7 @@ void step()
 		sim->on_tick(step);
 		sim->on_after_tick();
 		jitter += step;
+		updateAudio(ship->engine_left, ship->engine_right, step);
 	}
 	
 	glColor4f(1.0, 1.0, 1.0, 1.0);
@@ -297,8 +298,6 @@ void step()
 	glFlush();
 	glFinish();
 	SDL_GL_SwapWindow(window);
-
-	updateAudio(ship->engine_left, ship->engine_right, dt);
 }
 
 void run()
