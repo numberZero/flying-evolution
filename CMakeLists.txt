@@ -11,9 +11,11 @@ find_package(SDL2 REQUIRED)
 add_executable(subsimulation
 	main.cxx
 	common/model.cxx
-	simulation/simulation.cxx
-	simulation/ship.cxx
 	simulation/evolution.cxx
+	simulation/ship.cxx
+	simulation/simulation.cxx
+	sound/generator.cxx
+	sound/sound.cxx
 )
 
 target_include_directories(subsimulation PUBLIC

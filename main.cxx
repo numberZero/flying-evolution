@@ -6,6 +6,7 @@
 #include "common/model.hxx"
 #include "simulation/ship.hxx"
 #include "simulation/simulation.hxx"
+#include "sound/sound.hxx"
 
 SDL_Window *window;
 static SDL_GLContext context;
@@ -296,6 +297,8 @@ void step()
 	glFlush();
 	glFinish();
 	SDL_GL_SwapWindow(window);
+
+	updateAudio(ship->engine_left, ship->engine_right, dt);
 }
 
 void run()
@@ -335,8 +338,10 @@ int main(int argc, char **argv)
 {
 	initSDL();
 	initGL();
+	initAudio();
 	init();
 	run();
+	closeAudio();
 	SDL_Quit();
 	return 0;
 }

@@ -35,7 +35,8 @@ inline Float pown(Float x, unsigned n)
 	return value;
 }
 
-inline void clampIt(Float& variable, Float max_abs)
+template <typename T>
+inline void clampIt(T& variable, T max_abs)
 {
 	assert(max_abs >= 0);
 	if(variable > max_abs)
@@ -44,7 +45,8 @@ inline void clampIt(Float& variable, Float max_abs)
 		variable = -max_abs;
 }
 
-inline Float clamp(Float value, Float max_abs)
+template <typename T>
+inline T clamp(T value, T max_abs)
 {
 	clampIt(value, max_abs);
 	return value;
