@@ -10,14 +10,15 @@ find_package(SDL2 REQUIRED)
 
 add_executable(subsimulation
 	main.cxx
-	simulation.cxx
-	ship.cxx
-	model.cxx
-	evolution.cxx
+	common/model.cxx
+	simulation/simulation.cxx
+	simulation/ship.cxx
+	simulation/evolution.cxx
 )
 
 target_include_directories(subsimulation PUBLIC
-# 	${PROJECT_SOURCE_DIR}/lib/
+ 	${PROJECT_SOURCE_DIR}/
+ 	${PROJECT_SOURCE_DIR}/common/
 	${EIGEN3_INCLUDE_DIR}
 	${SDL2_INCLUDE_DIR}
 )

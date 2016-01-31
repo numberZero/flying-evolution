@@ -2,14 +2,14 @@
 #include <memory>
 #include <GL/gl.h>
 #include <SDL.h>
-#include "ship.hxx"
-#include "simulation.hxx"
-#include "model.hxx"
-#include "evolution.hxx"
+#include "simulation/evolution.hxx"
+#include "common/model.hxx"
+#include "simulation/ship.hxx"
+#include "simulation/simulation.hxx"
 
 SDL_Window *window;
-SDL_GLContext context;
-long t_base;
+static SDL_GLContext context;
+static long t_base;
 
 bool events()
 {
@@ -159,11 +159,11 @@ void textOut(Float x, Float y, Float size, std::string text)
 	glEnd();
 }
 
-ProgramDesc base_prg;
-ProgramDesc const *prg;
-std::unique_ptr<ProgrammedShip> ship;
-std::unique_ptr<Simulation> sim;
-EvolutionThread th;
+static ProgramDesc base_prg;
+static ProgramDesc const *prg;
+static std::unique_ptr<ProgrammedShip> ship;
+static std::unique_ptr<Simulation> sim;
+static EvolutionThread th;
 
 void restartSimulation()
 {
